@@ -22,10 +22,10 @@ export default function Home() {
         </div>
         <div className="hero-index">01 <span/> 03</div>
       </section>
-      <section className="landing-stats" id="recursos"><div><strong>02</strong><span>JOGADORES POR PARTIDA</span></div><div><strong>02</strong><span>BARALHOS</span></div><div><strong>04</strong><span>CURINGAS</span></div><div className="stats-note">Feito para jogar junto,<br/><em>mesmo de longe.</em></div></section>
+      <section className="landing-stats" id="recursos"><div><strong>02</strong><span>JOGADORES POR PARTIDA</span></div><div><strong>02</strong><span>BARALHOS</span></div><div><strong>02</strong><span>CURINGA (CARTA 2)</span></div><div className="stats-note">Feito para jogar junto,<br/><em>mesmo de longe.</em></div></section>
       <section className="how-section" id="como-jogar">
         <div className="section-kicker">SIMPLES DE COMEÇAR</div><h2>Prepare a mesa.<br/><em>O resto é estratégia.</em></h2>
-        <div className="how-grid"><article><span>01</span><div className="how-icon">♧</div><h3>Entre na partida</h3><p>Jogue contra o robô ou crie uma sala online para jogar com outra pessoa.</p></article><article><span>02</span><div className="how-icon">▤</div><h3>Monte suas canastras</h3><p>Combine cartas, escolha suas jogadas e aproveite cada oportunidade.</p></article><article><span>03</span><div className="how-icon">♛</div><h3>Vença a rodada</h3><p>Use estratégia para baixar suas cartas e conquistar a vitória.</p></article></div>
+        <div className="how-grid"><article><span>01</span><div className="how-icon">♧</div><h3>Entre na partida</h3><p>Jogue contra o robô ou crie uma sala online para jogar com outra pessoa.</p></article><article><span>02</span><div className="how-icon">▤</div><h3>Monte suas canastras</h3><p>Combine trincas ou sequências e use o 2 como curinga quando necessário.</p></article><article><span>03</span><div className="how-icon">♛</div><h3>Vença a rodada</h3><p>Use estratégia para baixar suas cartas e conquistar a vitória.</p></article></div>
         <div className="bottom-cta"><div><small>A MESA ESTÁ TE ESPERANDO</small><h2>Vamos jogar uma?</h2></div><Link to="/salas" className="landing-cta">Entrar na mesa <span>→</span></Link></div>
       </section>
       <footer className="landing-footer"><Link to="/" className="landing-brand"><span>♠</span> TRANCA<span className="brand-gold">.</span></Link><span>UM CLÁSSICO PARA COMPARTILHAR.</span><span>© 2026 TRANCA ONLINE</span></footer>
