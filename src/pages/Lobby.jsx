@@ -55,9 +55,11 @@ export default function Lobby() {
         <div className="mode-card"><div className="mode-icon online">◎</div><div className="mode-info"><strong>Criar uma sala</strong><span>Gere um código e convide outra pessoa.</span></div><button className="outline-button" disabled={busy} onClick={createRoom}>Criar sala</button></div>
         <div className="join-row"><input value={roomCode} onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 5))} placeholder="CÓDIGO DA SALA" maxLength={5} /><button className="outline-button" disabled={busy || roomCode.length !== 5} onClick={joinRoom}>Entrar</button></div>
         {error && <p className="error-message">{error}</p>}
-        <p className="lobby-foot">Partidas para 2 jogadores • 2 baralhos • 4 curingas</p>
+        <p className="lobby-foot">Partidas para 2 jogadores • 2 baralhos • sem jokers • 2 como curinga</p>
       </section>
       <footer className="site-footer">TRANCA <span>◆</span> JOGO DE CARTAS</footer>
     </main>
   );
 }
+
+[executed on device: DESKTOP-D2HOUDN (d24de8ce-8a96-439d-8997-f665b587f1ec)]
