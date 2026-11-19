@@ -1,13 +1,13 @@
 # Tranca — jogo de cartas para 2 jogadores
 
-Projeto full-stack com Vite, React, React Router DOM, Express e Socket.IO.
+Projeto full-stack com Vite, React, Express e Socket.IO.
 
 ## Requisitos
 - Node.js 18+
 - npm
 
 ## Rodar no Windows
-1. Extraia a pasta.
+1. Abra a pasta do projeto.
 2. Dê duplo clique em `iniciar_jogo.bat`.
 3. O navegador abre em `http://localhost:5173`.
 
@@ -16,22 +16,28 @@ Ou no terminal:
 npm install
 npm run dev
 ```
-Frontend: http://localhost:5173
-Servidor multiplayer: http://localhost:3001/health
+Frontend local: http://localhost:5173  
+Servidor multiplayer local: http://localhost:3001/health
 
 ## Modos
-- **Contra robô:** funciona localmente, sem conta ou configuração.
-- **Online:** clique em Criar sala e compartilhe o código de 5 caracteres. A outra pessoa abre o mesmo site e informa o código. O servidor precisa estar acessível aos dois jogadores; `localhost` só funciona para quem está no mesmo computador. Para jogar pela internet, hospede o servidor Node e o frontend em um serviço público e configure `VITE_SERVER_URL` com a URL do servidor.
+- **Contra robô:** partida local.
+- **Online:** crie uma sala e compartilhe o código de 5 caracteres. O segundo jogador entra pelo mesmo site. Para jogar pela internet, o servidor Socket.IO precisa estar publicado e o frontend configurado com `VITE_SERVER_URL` apontando para o servidor.
 
-## Rotas React
-- `/` lobby e seleção de modo
-- `/jogar` mesa de jogo
-- `/resultado` placar da rodada
-
-## Regras e escopo desta versão
-Esta é uma implementação inicial jogável de Tranca para dois jogadores: dois baralhos, quatro curingas, 11 cartas por jogador, dois mortos de 11 cartas, compra, descarte, jogos de cartas do mesmo valor, canastras e pontuação básica. As regras de Tranca variam entre regiões e grupos. Nesta versão, a validação de jogos é simplificada e ainda não cobre todas as regras oficiais/variações (por exemplo, todas as regras de sequência, restrições de descarte, fechamento de lixo e partidas até pontuação-alvo). O robô é uma IA simples de demonstração, não um adversário estratégico avançado.
+## Regras desta versão
+- Dois baralhos, sem os Jokers tradicionais.
+- O único curinga é o 2, de qualquer naipe.
+- No máximo um 2 atuando como curinga por jogo; um 2 natural na posição correta da sequência não conta como curinga.
+- Canastra limpa: bônus de 200 pontos. Canastra suja com 2 curinga: bônus de 100 pontos.
+- O 2 pode ser descartado e não bloqueia a lixeira.
+- Apenas o 3 preto (paus ou espadas) bloqueia a compra da lixeira.
+- Se o topo da lixeira for um 2, ele precisa ser encaixado em um jogo com pelo menos duas cartas naturais.
+- O 2 curinga pode ser substituído pela carta natural que faltava; depois, permanece na ponta do mesmo jogo e não pode migrar para outra combinação.
+- São aceitas trincas/grupos do mesmo valor e sequências do mesmo naipe.
 
 ## Build
 ```bash
 npm run build
 ```
+
+## Render
+A URL pública do Render será incluída após confirmar o workspace e localizar o serviço deste jogo.
