@@ -5,6 +5,7 @@ export const SUITS = [
   { id: "spades", symbol: "♠", color: "black", name: "Espadas" }
 ];
 export const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+const ORDER = new Map(RANKS.map((rank, index) => [rank, index + 1]));
 
 function shuffle(items) {
   const result = [...items];
@@ -15,23 +16,79 @@ function shuffle(items) {
   return result;
 }
 
+// A Tranca usa dois baralhos sem os jokers tradicionais.
 function makeDeck() {
   const cards = [];
   for (let deck = 0; deck < 2; deck++) {
     for (const suit of SUITS) {
-      for (const rank of RANKS) cards.push({ id: `${deck}-${suit.id}-${rank}`, rank, suit: suit.id, joker: false });
+      for (const rank of RANKS) {
+        cards.push({ id: `${deck}-${suit.id}-${rank}`, rank, suit: suit.id, joker: false });
+      }
     }
-    cards.push({ id: `${deck}-joker-1`, rank: "JOKER", suit: "joker", joker: true });
-    cards.push({ id: `${deck}-joker-2`, rank: "JOKER", suit: "joker", joker: true });
   }
   return shuffle(cards);
 }
 
-function cardValue(card) {
-  if (card.joker) return 20;
+export function cardValue(card) {
   if (card.rank === "2") return 10;
   if (["8", "9", "10", "J", "Q", "K", "A"].includes(card.rank)) return 10;
   return Number(card.rank);
+}
+
+function isConsecutive(ranks) {
+  const values = ranks.map((rank) => ORDER.get(rank)).sort((a, b) => a - b);
+  return values.every((value, index) => index === 0 || value === values[index - 1] + 1);
+}
+
+function sequenceSuit(cards) {
+  const nonTwos = cards.filter((card) => card.rank !== "2");
+  if (nonTwos.length < 2) return null;
+  const suit = nonTwos[0].suit;
+  if (!nonTwos.every((card) => card.suit === suit)) return null;
+  return suit;
+}
+
+// O 2 é natural somente quando completa sua posição real na sequência do mesmo naipe.
+export function isNaturalTwo(cards, twoCard) {
+  if (!twoCard || twoCard.rank !== "2") return false;
+  const others = cards.filter((card) => card.id !== twoCard.id);
+  if (others.length < 2 || !others.every((card) => card.suit === twoCard.suit)) return false;
+  return isConsecutive([...others.map((card) => card.rank), "2"]);
+}
+
+export function isDirtyMeld(cards) {
+  if (cards.some((card) => card.joker)) return true;
+  const two = cards.find((card) => card.rank === "2");
+  if (!two) return false;
+  return !isNaturalTwo(cards, two);
+}
+
+export function validMeld(cards) {
+  if (!Array.isArray(cards) || cards.length < 3 || cards.some((card) => card.joker)) return false;
+  const twos = cards.filter((card) => card.rank === "2");
+  if (twos.length > 1) return false;
+
+  // Primeiro aceita uma sequência natural, incluindo A-2-3 do mesmo naipe.
+  if (cards.every((card) => card.suit === cards[0].suit) && isConsecutive(cards.map((card) => card.rank))) {
+    return true;
+  }
+
+  // Um único 2 pode substituir uma carta em uma sequência do mesmo naipe.
+  if (twos.length === 1) {
+    const naturals = cards.filter((card) => card.id !== twos[0].id);
+    const suit = sequenceSuit(cards);
+    if (suit && naturals.every((card) => card.suit === suit)) {
+      const values = naturals.map((card) => ORDER.get(card.rank)).sort((a, b) => a - b);
+      const gaps = values.slice(1).map((value, index) => value - values[index]);
+      if (gaps.every((gap) => gap === 1) || (gaps.filter((gap) => gap === 2).length === 1 && gaps.every((gap) => gap === 1 || gap === 2))) {
+        return true;
+      }
+    }
+  }
+
+  // Trinca/grupo de mesmo valor: o 2 pode ser o único curinga.
+  const naturals = cards.filter((card) => card.rank !== "2");
+  return naturals.length >= 2 && naturals.every((card) => card.rank === naturals[0].rank);
 }
 
 export function createGame(names = ["Você", "Adversário"]) {
@@ -78,29 +135,34 @@ export function publicState(game, seat) {
   };
 }
 
-function validMeld(cards) {
-  if (cards.length < 3) return false;
-  const naturals = cards.filter((c) => !c.joker && c.rank !== "2");
-  if (naturals.length === 0) return false;
-  const rank = naturals[0].rank;
-  if (!naturals.every((c) => c.rank === rank)) return false;
-  const wilds = cards.length - naturals.length;
-  return wilds <= Math.floor(cards.length / 2);
-}
-
 function canastaBonus(meld) {
   if (meld.cards.length < 7) return 0;
-  return meld.cards.some((c) => c.joker || c.rank === "2") ? 300 : 500;
+  return isDirtyMeld(meld.cards) ? 100 : 200;
 }
 
-function scorePlayer(player, won = false) {
-  let total = player.melds.reduce((sum, meld) => {
+export function scorePlayer(player, won = false) {
+  const total = player.melds.reduce((sum, meld) => {
     const base = meld.cards.reduce((s, card) => s + cardValue(card), 0);
     return sum + base + canastaBonus(meld);
   }, 0);
-  total -= player.hand.reduce((sum, card) => sum + cardValue(card), 0);
-  if (won) total += 100;
-  return total;
+  const handPenalty = player.hand.reduce((sum, card) => sum + cardValue(card), 0);
+  return total - handPenalty + (won ? 100 : 0);
+}
+
+function isBlackThree(card) {
+  return card?.rank === "3" && (card.suit === "clubs" || card.suit === "spades");
+}
+
+function canReplaceTwo(meld, twoCard, replacement) {
+  if (!twoCard || twoCard.rank !== "2" || !replacement || replacement.rank === "2" || replacement.joker) return false;
+  if (isNaturalTwo(meld.cards, twoCard)) return false;
+  const naturals = meld.cards.filter((card) => card.id !== twoCard.id);
+  if (naturals.length < 2 || !naturals.every((card) => card.suit === naturals[0].suit)) return false;
+  const values = naturals.map((card) => ORDER.get(card.rank)).sort((a, b) => a - b);
+  const gapIndex = values.findIndex((value, index) => index > 0 && value - values[index - 1] === 2);
+  if (gapIndex < 0) return false;
+  const expected = values[gapIndex - 1] + 1;
+  return ORDER.get(replacement.rank) === expected && replacement.suit === naturals[0].suit;
 }
 
 export function applyAction(game, seat, action) {
@@ -119,40 +181,55 @@ export function applyAction(game, seat, action) {
     if (next.hasDrawn) return { ok: false, error: "Você já comprou uma carta neste turno." };
     if (!next.discard.length) return { ok: false, error: "Não há cartas no descarte." };
     const top = next.discard[next.discard.length - 1];
-    if (player.hand.length === 0) return { ok: false, error: "Você precisa ter cartas na mão." };
+    if (isBlackThree(top)) return { ok: false, error: "O 3 preto tranca a lixeira. Compre do monte." };
     const selected = action.cardIds || [];
-    const chosen = player.hand.filter((c) => selected.includes(c.id));
-    if (!selected.includes(top.id) && !chosen.some((c) => c.rank === top.rank)) {
-      return { ok: false, error: "Para pegar o lixo, selecione cartas que formem um jogo com a carta do topo." };
+    const chosen = player.hand.filter((card) => selected.includes(card.id));
+    if (chosen.length !== selected.length) return { ok: false, error: "Seleção de cartas inválida." };
+    if (top.rank === "2") {
+      if (chosen.length < 2 || chosen.some((card) => card.rank === "2") || !validMeld([...chosen, top])) {
+        return { ok: false, error: "O 2 no topo não pode ser a única chave. Encaixe-o em um jogo formado por cartas naturais." };
+      }
+    } else if (!validMeld([...chosen, top])) {
+      return { ok: false, error: "Para pegar a lixeira, use a carta do topo em um jogo válido com cartas da sua mão." };
     }
     player.hand.push(...next.discard);
     next.discard = [];
     next.hasDrawn = true;
-    next.message = `${player.name} pegou o lixo.`;
+    next.message = `${player.name} pegou a lixeira.`;
   } else if (action.type === "meld") {
-    const selected = player.hand.filter((c) => action.cardIds.includes(c.id));
+    const selected = player.hand.filter((card) => action.cardIds.includes(card.id));
     if (selected.length !== action.cardIds.length || !validMeld(selected)) {
-      return { ok: false, error: "Jogo inválido. Forme trincas ou grupos de cartas do mesmo valor." };
+      return { ok: false, error: "Jogo inválido. Forme trincas ou sequências e use no máximo um 2 como curinga." };
     }
-    player.hand = player.hand.filter((c) => !action.cardIds.includes(c.id));
+    player.hand = player.hand.filter((card) => !action.cardIds.includes(card.id));
     player.melds.push({ id: `meld-${Date.now()}-${Math.random()}`, cards: selected });
     next.message = `${player.name} baixou um jogo de ${selected.length} cartas.`;
-  } else if (action.type === "discard") {
-    const card = player.hand.find((c) => c.id === action.cardId);
-    if (!card) return { ok: false, error: "Selecione uma carta para descartar." };
-    if (player.hand.length === 1 && !player.hasTakenMorto) {
-      // O descarte continua permitido; pegar o morto ocorre quando a mão zera.
+  } else if (action.type === "replace-wild") {
+    const meld = player.melds.find((item) => item.id === action.meldId);
+    const two = meld?.cards.find((card) => card.id === action.wildCardId);
+    const replacement = player.hand.find((card) => card.id === action.replacementCardId);
+    if (!meld || !canReplaceTwo(meld, two, replacement)) {
+      return { ok: false, error: "Só é possível trocar o 2 curinga pela carta natural que faltava na sequência." };
     }
-    player.hand = player.hand.filter((c) => c.id !== card.id);
+    const updated = meld.cards.filter((card) => card.id !== two.id);
+    updated.push(replacement, two); // O 2 permanece no mesmo jogo, em uma das pontas.
+    if (!validMeld(updated)) return { ok: false, error: "A troca não forma uma sequência válida." };
+    meld.cards = updated;
+    player.hand = player.hand.filter((card) => card.id !== replacement.id);
+    next.message = `${player.name} colocou a carta natural no lugar e moveu o 2 para a ponta do mesmo jogo.`;
+  } else if (action.type === "discard") {
+    const card = player.hand.find((item) => item.id === action.cardId);
+    if (!card) return { ok: false, error: "Selecione uma carta para descartar." };
+    player.hand = player.hand.filter((item) => item.id !== card.id);
     next.discard.push(card);
-    next.message = `${player.name} descartou ${card.rank === "JOKER" ? "coringa" : card.rank}.`;
+    next.message = `${player.name} descartou ${card.rank}.`;
 
     if (player.hand.length === 0) {
       if (!player.hasTakenMorto && next.mortos[seat].length) {
         player.hand = next.mortos[seat];
         next.mortos[seat] = [];
         player.hasTakenMorto = true;
-        next.message += ` Pegou o morto!`;
+        next.message += " Pegou o morto!";
       } else {
         const other = next.players[1 - seat];
         const hasCanasta = player.melds.some((meld) => meld.cards.length >= 7);
@@ -180,10 +257,10 @@ export function applyAction(game, seat, action) {
 }
 
 export function startNextHand(game) {
-  const scores = game.players.map((p) => p.score);
-  const names = game.players.map((p) => p.name);
+  const scores = game.players.map((player) => player.score);
+  const names = game.players.map((player) => player.name);
   const next = createGame(names);
-  next.players.forEach((p, i) => { p.score = scores[i]; });
+  next.players.forEach((player, index) => { player.score = scores[index]; });
   next.handNumber = game.handNumber + 1;
   next.message = "Nova rodada! " + names[next.turn] + " começa.";
   return next;
@@ -192,7 +269,7 @@ export function startNextHand(game) {
 export function findSimpleMeld(hand) {
   const groups = new Map();
   for (const card of hand) {
-    if (card.joker || card.rank === "2") continue;
+    if (card.rank === "2" || card.joker) continue;
     groups.set(card.rank, [...(groups.get(card.rank) || []), card]);
   }
   for (const cards of groups.values()) {
@@ -200,3 +277,5 @@ export function findSimpleMeld(hand) {
   }
   return null;
 }
+
+[executed on device: DESKTOP-D2HOUDN (d24de8ce-8a96-439d-8997-f665b587f1ec)]
