@@ -14,6 +14,7 @@ export default function Table() {
   const [local, setLocal] = useState(() => newLocalGame(name));
   const [remote, setRemote] = useState(null);
   const [selected, setSelected] = useState([]);
+  const [wildTarget, setWildTarget] = useState(null);
   const [error, setError] = useState("");
   const [waiting, setWaiting] = useState(mode === "online");
 
@@ -35,7 +36,7 @@ export default function Table() {
       if (!result?.ok) { setWaiting(false); setError(result?.error || "Não foi possível sincronizar a sala."); }
     });
     return () => { socket.off("room:state", onState); socket.off("room:closed", onClosed); };
-  }, [mode]);
+  }, [mode, room]);
 
   useEffect(() => {
     if (mode !== "bot" || !local || local.turn !== 1 || local.status !== "playing") return;
@@ -70,10 +71,10 @@ export default function Table() {
       });
     }
     setSelected([]);
+    setWildTarget(null);
   }, [mode, room]);
 
   const toggleCard = (cardId) => setSelected((current) => current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId]);
-
   const canFormSet = useMemo(() => selected.length >= 3, [selected]);
 
   function nextHand() {
@@ -108,7 +109,7 @@ export default function Table() {
         </div>
 
         <div className="center-zone">
-          <Melds melds={me?.melds} title="Seus jogos na mesa" />
+          <Melds melds={me?.melds} title="Seus jogos na mesa" onWildClick={(meldId, cardId) => { setWildTarget({ meldId, wildCardId: cardId }); setError("Selecione na sua mão a carta natural que substitui o 2."); }} />
           <div className="piles">
             <div className="pile-block"><span>MONTE</span><button className="deck-pile" disabled={!isMyTurn || state.stockCount === 0} onClick={() => send({ type: "draw-stock" })}><span>♠</span><small>{state.stockCount}</small></button></div>
             <div className="pile-block"><span>LIXO</span><button className="discard-pile" disabled={!isMyTurn || !state.discard?.length} onClick={() => send({ type: "take-discard", cardIds: selected })}>{state.discard?.length ? <Card card={state.discard[state.discard.length - 1]} small /> : <span className="empty-pile">—</span>}<small>{state.discard?.length || 0}</small></button></div>
@@ -124,12 +125,15 @@ export default function Table() {
           <div className="action-bar">
             <span className="selection-count">{selected.length} selecionada(s)</span>
             <button className="action-button" disabled={!isMyTurn || !canFormSet} onClick={() => send({ type: "meld", cardIds: selected })}>Baixar jogo</button>
-            <button className="gold-button" disabled={!isMyTurn || selected.length !== 1} onClick={() => send({ type: "discard", cardId: selected[0] })}>Descartar</button>
+            {wildTarget && <button className="action-button" disabled={!isMyTurn || selected.length !== 1} onClick={() => send({ type: "replace-wild", ...wildTarget, replacementCardId: selected[0] })}>Trocar curinga</button>}
+            <button className="gold-button" disabled={!isMyTurn || selected.length !== 1 || Boolean(wildTarget)} onClick={() => send({ type: "discard", cardId: selected[0] })}>Descartar</button>
           </div>
         </div>
       </section>
       {error && <div className="toast-error">{error}</div>}
-      <footer className="rules-strip"><span>♣</span> Trincas e grupos do mesmo valor <span>♦</span> Canastra: 7 cartas <span>♥</span> Bater exige ao menos uma canastra <span>♠</span></footer>
+      <footer className="rules-strip"><span>♣</span> 2 é o único curinga · máximo 1 por jogo <span>♦</span> Canastra limpa 200 / suja 100 <span>♥</span> 3 preto tranca a lixeira <span>♠</span></footer>
     </main>
   );
 }
+
+[executed on device: DESKTOP-D2HOUDN (d24de8ce-8a96-439d-8997-f665b587f1ec)]
