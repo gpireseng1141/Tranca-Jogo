@@ -61,6 +61,18 @@ io.on("connection", (socket) => {
     socket.join(room.code); room.game = createGame([room.players[0].name, room.players[1].name]);
     callback({ ok: true, code: room.code, seat }); emitRoom(room);
   });
+  // O cliente solicita o estado depois de instalar os listeners na tela da mesa.
+  socket.on("room:sync", ({ code }, callback = () => {}) => {
+    const room = rooms.get(String(code || "").trim().toUpperCase());
+    const player = room?.players.find((p) => p.socketId === socket.id);
+    if (!room || !player) return callback({ ok: false, error: "Sala não encontrada para esta conexão." });
+    socket.emit("room:state", {
+      code: room.code,
+      players: room.players.map(({ name, connected }) => ({ name, connected })),
+      state: publicState(room.game, player.seat)
+    });
+    callback({ ok: true });
+  });
   socket.on("game:action", ({ code, action }, callback = () => {}) => {
     const room = rooms.get(String(code || "").toUpperCase());
     const player = room?.players.find((p) => p.socketId === socket.id);
