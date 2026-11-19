@@ -31,6 +31,9 @@ export default function Table() {
     const onClosed = (message) => setError(message);
     socket.on("room:state", onState);
     socket.on("room:closed", onClosed);
+    socket.emit("room:sync", { code: room }, (result) => {
+      if (!result?.ok) { setWaiting(false); setError(result?.error || "Não foi possível sincronizar a sala."); }
+    });
     return () => { socket.off("room:state", onState); socket.off("room:closed", onClosed); };
   }, [mode]);
 
