@@ -40,4 +40,6 @@ npm run build
 ```
 
 ## Render
-A URL pública do Render será incluída após confirmar o workspace e localizar o serviço deste jogo.
+**Site público:** https://tranca-cartas-online.onrender.com
+
+**Painel do serviço:** https://dashboard.render.com/web/srv-dbv44vlg1s2s73e4of1g
