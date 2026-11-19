@@ -37,7 +37,15 @@ function roomCode() {
 function emitRoom(room) {
   for (const player of room.players) {
     const socket = io.sockets.sockets.get(player.socketId);
-    if (socket) socket.emit("room:state", {
+    if (!socket) continue;
+    if (!room.game) {
+      socket.emit("room:waiting", {
+        code: room.code,
+        players: room.players.map(({ name, connected }) => ({ name, connected }))
+      });
+      continue;
+    }
+    socket.emit("room:state", {
       code: room.code,
       players: room.players.map(({ name, connected }) => ({ name, connected })),
       state: publicState(room.game, player.seat)
@@ -66,6 +74,13 @@ io.on("connection", (socket) => {
     const room = rooms.get(String(code || "").trim().toUpperCase());
     const player = room?.players.find((p) => p.socketId === socket.id);
     if (!room || !player) return callback({ ok: false, error: "Sala não encontrada para esta conexão." });
+    if (!room.game) {
+      socket.emit("room:waiting", {
+        code: room.code,
+        players: room.players.map(({ name, connected }) => ({ name, connected }))
+      });
+      return callback({ ok: true, waiting: true });
+    }
     socket.emit("room:state", {
       code: room.code,
       players: room.players.map(({ name, connected }) => ({ name, connected })),
